@@ -1,0 +1,176 @@
+openapi: 3.0.4
+info:
+  title: IoTWall API
+  description: API schema for the IoTWall REST API
+  version: 1.0.0
+
+servers:
+  - url: https://localhost:8080
+
+paths:
+  /api/firewall/rules/:
+    get:
+      summary: Returns the ruleset
+      description: Returns all firewall rules
+      responses:
+        "200":
+          description: A JSON array of user names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RuleInfo"
+    post:
+      summary: Adds rules to the ruleset
+      description: Adds rules to the ruleset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - direction
+                - rules
+              properties:
+                direction:
+                 $ref: "#/components/schemas/Direction"
+                rules:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Rule"
+      responses:
+        "200":
+          description: Ok
+    delete:
+      summary: Deletes all rules
+      description: Deletes all rules
+      responses:
+        "200":
+          description: Ok
+  /api/firewall/rules/{key}:
+    put:
+      summary: Updates a rule
+      description: Updates the rule with the given key.
+        All rule fields will be overwritten.
+        If a field is omitted in the request, the default value will be used.
+      parameters:
+        - $ref: "#/components/parameters/keyParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Rule"
+      responses:
+        "200":
+          description: Ok
+          
+    delete:
+      summary: Deletes a rule
+      description: Deletes a rule with the given key
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema:
+            type: integer
+            description: Key of the rule
+      responses:
+        "200":
+          description: Ok
+  /api/credentials:
+    put:
+      summary: Change API credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Credentials"
+      responses:
+        "200":
+          description: Ok
+
+
+security:
+  - basicAuth: []
+
+                    
+components:
+  schemas:
+    Rule:
+      title: Firewall rule
+      description: Describes a firewall rule.
+        Omitted properties are assumed to be a wildcard.
+        If only one property of start and end port is given (e.g., only src_port_start but not src_port_end), the port is treated as exact match.
+      type: object
+      required:
+        - action
+      properties:
+        ip:
+          type: string
+          description: If omitted, all IPs match
+        src_port_start:
+          type: number
+        src_port_end:
+          type: number
+        dst_port_start:
+          type: number
+        dst_port_end:
+          type: number
+        protocol:
+          type: string
+          default: ALL
+          enum:
+            - ICMP
+            - TCP
+            - UDP
+            - ALL
+        action:
+          description: Whether to allow or block the packet
+          type: string
+          enum:
+            - ACCEPT
+            - DROP
+    RuleInfo:
+      title: Rule with additional information
+      allOf:
+        - $ref: "#/components/schemas/Rule"
+        - type: object
+          properties:
+            key:
+              type: number
+            direction:
+              $ref: "#/components/schemas/Direction"
+    Direction:
+      title: Rule direction
+      description: Whether the rule is checked for ingoing or outgoing packets
+      type: string
+      enum:
+        - INPUT
+        - OUTPUT
+    Credentials:
+      title: Credentials
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+  parameters:
+    keyParam:
+      in: path
+      name: key
+      required: true
+      schema:
+        type: integer
+        description: Key of the rule
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
